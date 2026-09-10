@@ -4,6 +4,14 @@ import { Markdown } from '../src/lib/markdown';
 import { SECTIONS } from '../src/data/textbook';
 import { QUESTIONS } from '../src/data/questions';
 import { DRILLS } from '../src/data/drills';
+import PersonalInfoWidget from '../src/components/widgets/personal-info';
+import RightsWidget from '../src/components/widgets/rights';
+import PhishingWidget from '../src/components/widgets/phishing';
+import TokenizeWidget from '../src/components/widgets/tokenize';
+import TemperatureWidget from '../src/components/widgets/temperature';
+import AttentionWidget from '../src/components/widgets/attention';
+import PromptPartsWidget from '../src/components/widgets/prompt-parts';
+import FewShotWidget from '../src/components/widgets/few-shot';
 
 /**
  * 実際に描いてみて、画面に出てはいけないものが残っていないかを見る検査。
@@ -25,7 +33,16 @@ const BACKSLASH = String.fromCharCode(92);
  * `src/components/widgets/` にファイルを足したら、この一覧にも足すこと
  * （足し忘れても動くが、描画の検査だけ素通りしてしまう）。
  */
-const WIDGETS: [string, ComponentType][] = [];
+const WIDGETS: [string, ComponentType][] = [
+  ['personal-info', PersonalInfoWidget],
+  ['rights', RightsWidget],
+  ['phishing', PhishingWidget],
+  ['tokenize', TokenizeWidget],
+  ['temperature', TemperatureWidget],
+  ['attention', AttentionWidget],
+  ['prompt-parts', PromptPartsWidget],
+  ['few-shot', FewShotWidget],
+];
 
 /** 数式として描かれた部分だけを取り出す */
 function mathTexts(html: string): string[] {
