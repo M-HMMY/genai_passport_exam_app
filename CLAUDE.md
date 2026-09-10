@@ -291,9 +291,10 @@ codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --col
 | 教本の本文 | **済**（2026 年 9 月 11 日）。全 41 節・約 14.9 万字。入門編は手書き、第 1〜11 章は Codex に 1 章 1 担当で書かせた |
 | 章ごとの執筆プロンプト | **済**。`scripts/prompts/`。共通部分は `00-common.md`、章ごとが `02`〜`12`、レビューが `90`・`91`、確認問題が `20` |
 | 教本の通しレビュー | **1 巡済**（2026 年 9 月 11 日）。**ただし Codex は 5 本とも利用上限に当たって報告が残らず、章を書いていない側（Claude）が読んだもの。**上限が戻ったら `90-review.md` で機械的にもう 1 巡かける価値がある |
-| 確認問題 | **未着手。**全 11 ファイルが空の配列。プロンプトは `scripts/prompts/20-questions.md` にある |
+| 確認問題 | **済**（2026 年 9 月 11 日）。**180 問**（本番 60 問の 3 倍）。正解の位置は ア 44 / イ 44 / ウ 46 / エ 46、入門編を除く全 37 節に 3〜8 問ずつ。**教本を書いたのは Codex、問題を書いたのは Claude で、目は分けてある** |
+| 確認問題のレビュー | **未着手。**`scripts/prompts/91-review-questions.md` で回すこと。**問題を書いたのは Claude なので、ここは Codex にやらせる** |
 | 計算ドリル | **作らない方針**（この試験に計算問題は出ない）。`src/data/drills.ts` は骨格として残してある |
-| 体験ウィジェット | **未着手。**予定の一覧は `src/pages/Tools.tsx` の `GROUPS` |
+| 体験ウィジェット | **済**（2026 年 9 月 11 日）。8 つ（personal-info / rights / phishing / tokenize / temperature / attention / prompt-parts / few-shot）。`Tools.tsx` の `GROUPS` と `render-check.tsx` の `WIDGETS` に登録済みで、教本の該当節にも埋め込んである |
 | アイコン | **済**。`scripts/make_icons.py` で `public/icons/` と `scripts/app.ico` をまとめて作る。**紫→藤色に白い「AI」**（姉妹アプリと色がぶつからないように選んである） |
 | 複数選択問題への対応 | **未対応。**上記「この試験の形が設計に効く 4 点」の 3 番を参照 |
 | git | **初期化済・コミット済**（骨格を作った 2 commit）。既定ブランチは `main`。`deploy.yml` も `main` に合わせてある。**リモートは未設定**（GitHub にリポジトリを作って `git remote add` するところから） |
@@ -302,11 +303,9 @@ codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --col
 
 順番に意味があります。
 
-1. **確認問題を書く** … `scripts/prompts/20-questions.md` を章ごとに書き換えて使う。母集団は本番 60 問の 3 倍（**180 問**）を目安に。**ちょうど 60 問だと、本番形式の模試が毎回まったく同じ 60 問になります**
-2. **確認問題を別の目でレビューする** … `91-review-questions.md`。**教本用の `90-review.md` を流用しないこと**
-3. **教本にもう 1 巡レビューをかける** … 1 巡目は Codex が利用上限に当たったため、章を書いていない側が読んだだけ。**`90-review.md` で機械的な巡回を足す価値があります**
-4. **体験ウィジェットを作る** … `src/pages/Tools.tsx` の `GROUPS` に予定を並べてある。**`scripts/render-check.tsx` の `WIDGETS` にも足すこと**
-5. **公開する** … GitHub にリモートを作って push し、Settings → Pages → Source を GitHub Actions にする
+1. **確認問題を別の目でレビューする** … `91-review-questions.md`。**問題を書いたのは Claude なので、Codex にやらせること。**論点は「正解が本当に 1 つに定まるか」で、**教本用の `90-review.md` を流用しないこと**
+2. **教本にもう 1 巡レビューをかける** … 1 巡目は Codex が利用上限に当たったため、章を書いていない側が読んだだけ。**`90-review.md` で機械的な巡回を足す価値があります**
+3. **公開する** … GitHub にリモートを作って push し、Settings → Pages → Source を GitHub Actions にする
 
 **Codex の利用上限に注意。**5 本を並行させると当たります。**当たるとファイルは書き換わっているのに `-o` の報告だけが残らない**ので、`git diff` と `grep -c` で検算してください。同時に走らせるのは 4 本までが無難です。
 
