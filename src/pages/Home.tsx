@@ -318,7 +318,7 @@ export function Home(): JSX.Element {
           </table>
         </div>
         <p className="hint">
-          <strong>1 問あたり 60 秒です。</strong>考え込む余裕はありませんが、G検定ほど切迫してもいません。
+          <strong>1 問あたり 60 秒です。</strong>じっくり考え込む余裕はありません。
           落とせないのは<strong>用語の取り違え</strong>で、教本の一問一答と直前チェックシートがそのまま対策になります。
         </p>
         <p className="hint">
