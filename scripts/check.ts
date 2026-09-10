@@ -373,6 +373,7 @@ const DIRECTIVE_KEYS = new Set(['title', 'top', 'bottom', 'x', 'y', 'note', 'act
 for (const s of SECTIONS) {
   let type: string | null = null;
   let items = 0;
+  let noted = 0;
   for (const raw of s.body.split(LF)) {
     const t = raw.trim();
     if (t.startsWith('```')) {
@@ -380,10 +381,22 @@ for (const s of SECTIONS) {
         if (type === 'compare' && items % 2 === 1) {
           err(`教本 ${s.id}: compare の要素が奇数個なので左右が対にならない（1 行 1 セルで書く）`);
         }
+        // 奇数個の検査だけでは、`左 :: 右` を全行で書いた図を捕まえられない。
+        // `::` は左右の区切りではなく補足なので、この書き方をすると
+        // 「左の 1 行目」「左の 2 行目」…が左右に振り分けられて意味が壊れる。
+        // 要素が偶数だと素通りするうえ、系譜で 4 回起きている型なので数えておく。
+        // 補足付きのセルを並べた正当な図もあるため、全要素に付いている場合だけ疑う。
+        if (type === 'compare' && items >= 4 && noted === items) {
+          err(
+            `教本 ${s.id}: compare の全 ${items} 要素に :: が付いている。` +
+              '`::` は左右の区切りではなく補足。左右の対は 1 行 1 セルで書く',
+          );
+        }
         type = null;
       } else if (t.startsWith('```diagram:')) {
         type = t.slice('```diagram:'.length);
         items = 0;
+        noted = 0;
       }
       continue;
     }
@@ -391,6 +404,7 @@ for (const s of SECTIONS) {
     const m = /^([a-z]+):/.exec(t);
     if (m && DIRECTIVE_KEYS.has(m[1])) continue;
     items++;
+    if (t.includes('::')) noted++;
     if (t.includes('**')) err(`教本 ${s.id}: 図の中の ** は強調にならずそのまま出る → ${t.slice(0, 40)}`);
   }
 }
