@@ -298,7 +298,7 @@ codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --col
 | 体験ウィジェット | **未着手。**予定の一覧は `src/pages/Tools.tsx` の `GROUPS` |
 | アイコン | **済**。`scripts/make_icons.py` で `public/icons/` と `scripts/app.ico` をまとめて作る。**紫→藤色に白い「AI」**（姉妹アプリと色がぶつからないように選んである） |
 | 複数選択問題への対応 | **未対応。**上記「この試験の形が設計に効く 4 点」の 3 番を参照 |
-| git | **初期化済**。既定ブランチは `main`。`deploy.yml` も `main`。**リモートは未設定** |
+| git | **初期化済・コミット済**（骨格を作った 2 commit）。既定ブランチは `main`。`deploy.yml` も `main` に合わせてある。**リモートは未設定**（GitHub にリポジトリを作って `git remote add` するところから） |
 
 ## 次にやること
 
