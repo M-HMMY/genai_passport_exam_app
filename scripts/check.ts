@@ -121,7 +121,7 @@ for (const q of QUESTIONS) {
   let longest = 0;
   let absoluteInCorrect = 0;
   let absoluteInWrong = 0;
-  const absolute = /必ず|すべて|常に|まったく|一切/;
+  const absolute = /必ず|すべて|常に|まったく|一切|絶対|例外なく|いかなる場合|どのような場合|一律/;
   for (const q of QUESTIONS) {
     pos[q.answer] += 1;
     const lens = q.choices.map((c) => c.length);
@@ -132,10 +132,23 @@ for (const q of QUESTIONS) {
     });
     // 正解だけが長いと、読まずに「長いものを選ぶ」で当てられてしまう。
     // ただし 1〜2 文字の差まで数えると実態より大きく出るので、差の大きさで見る。
+    // 閾値は当初 1.5 倍だったが、別の目のレビューで 1.35 倍前後のものが
+    // 「長さで選べる」と大量に指摘されたため 1.3 倍まで下げた。
     const other = Math.max(...lens.filter((_, i) => i !== q.answer));
     if (lens[q.answer] >= other * 1.25 && lens[q.answer] - other >= 5) longest += 1;
-    if (lens[q.answer] > other * 1.5 && lens[q.answer] - other >= 8) {
+    if (lens[q.answer] >= other * 1.3 && lens[q.answer] - other >= 6) {
       warn(`問題 ${q.id}: 正解だけが突出して長い（正解 ${lens[q.answer]} 字 / 最長の誤答 ${other} 字）`);
+    }
+
+    // 誤答 3 つすべてに言い切りがあり、正解にだけ無いと、
+    // 内容を知らなくても「言い切っているものを外す」だけで当てられる。
+    // 全体の集計（下の absoluteInWrong）は 1 問ごとの偏りを拾えず、
+    // 実際にレビューで 10 問以上この型を指摘された。
+    if (q.choices.every((c, i) => i === q.answer || absolute.test(c)) && !absolute.test(q.choices[q.answer])) {
+      warn(
+        `問題 ${q.id}: 誤答 3 つすべてに言い切りがあり、正解にはない。` +
+          '言い切りを外すだけで選べてしまうので、誤答側からも言い切りを減らすこと',
+      );
     }
   }
   const n = QUESTIONS.length;
