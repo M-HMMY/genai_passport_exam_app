@@ -188,10 +188,15 @@ for (const q of QUESTIONS) {
 //   tree    … 最上位の数、または 1 段下がった子の数
 //   その他   … 要素の数
 {
-  const NUM = /([0-9０-９]+)\s*つ/;
+  // 算用数字だけを見ていたため、「三つの要件」と書いた図（要素は 4 個）を
+  // 素通りしていた。日本語の本文では漢数字のほうがむしろ普通なので両方見る。
+  const KANJI: Record<string, number> = {
+    一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10,
+  };
+  const NUM = /([0-9０-９]+|[一二三四五六七八九十])\s*つ/;
   const KEYS = new Set(['title', 'top', 'bottom', 'x', 'y', 'note', 'actors', 'caption']);
   const toNum = (t: string): number =>
-    Number(t.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+    KANJI[t] ?? Number(t.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
 
   for (const s of SECTIONS) {
     let type: string | null = null;
