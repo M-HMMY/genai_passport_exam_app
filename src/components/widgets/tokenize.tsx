@@ -59,7 +59,7 @@ export default function TokenizeWidget(): JSX.Element {
       <div className="widget-head">
         <h4 className="widget-title">文章がどう区切られるか見てみる</h4>
         <p className="widget-desc">
-          生成 AI は文章を、文字より大きい「トークン」という単位で扱います。文字数とは一致しません。
+          生成 AI は文章を「トークン」という単位で扱います。一語全体のことも、単語の一部や 1 文字のこともあり、文字数とは一致しません。
         </p>
       </div>
 
@@ -117,7 +117,7 @@ export default function TokenizeWidget(): JSX.Element {
         <strong>見てほしいのは「文字数とトークン数が一致しない」という一点だけ</strong>です。
         <br />
         生成 AI が<strong>正確な文字数の指定を苦手とする</strong>のは、このためです。
-        文章を文字より大きい単位で扱っていて、文字を 1 つずつ数えているわけではありません。
+        文章を文字数とは一致しないトークンの単位で扱っていて、文字を 1 つずつ数えているわけではありません。
         「ちょうど 100 文字で」と頼んでも、ぴったりにはなりにくいと考えてください。
       </p>
     </>
