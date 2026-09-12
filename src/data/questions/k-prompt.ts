@@ -59,7 +59,7 @@ export const kPromptQuestions: Question[] = [
     sectionId: 'k-prompt-1',
     question: 'パラメータとハイパーパラメータの違いとして、適切なものはどれか。',
     choices: [
-      'パラメータは人が事前に決める値、ハイパーパラメータは学習で決まる値である',
+      'パラメータは人が事前に決める設定値、ハイパーパラメータは学習によって決まる値である',
       'どちらも学習によって自動的に決まる値で、規模だけが異なる',
       'どちらも人が事前に決める値で、設定する場所だけが異なる',
       'パラメータは学習によって決まる値、ハイパーパラメータは人が事前に決める設定値である',
@@ -78,7 +78,7 @@ export const kPromptQuestions: Question[] = [
       'Temperature を上げるほど、無難で決まりきった出力になる',
       'Top-p を下げるほど候補の範囲が広がり、多様な出力になる',
       'Temperature は候補の選ばれやすさの差を調整し、Top-p は候補に残す範囲を決める',
-      'Temperature と Top-p は同じ設定の別名で、どちらか一方を使えばよい',
+      'Temperature と Top-p は同じ設定の別名なので、どちらか一方だけを使えばよい',
     ],
     answer: 2,
     explanation:
@@ -110,7 +110,7 @@ export const kPromptQuestions: Question[] = [
     choices: [
       'Instruction（指示）',
       'Context（文脈・背景）',
-      'Input Data（入力データ）',
+      'Input Data（入力するデータ）',
       'Output Indicator（出力の形）',
     ],
     answer: 3,

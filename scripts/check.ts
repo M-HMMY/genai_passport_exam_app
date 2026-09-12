@@ -127,36 +127,50 @@ for (const q of QUESTIONS) {
   let longest = 0;
   let absoluteInCorrect = 0;
   let absoluteInWrong = 0;
-  const absolute = /必ず|すべて|常に|まったく|一切|絶対|例外なく|いかなる場合|どのような場合|一律/;
+  // 「すべて」は数え方が難しい。「すべての入力に対して」のようなただの記述まで
+  // 拾ってしまうので、断定を強める語だけを見る。
+  const absolute = /必ず|常に|まったく|全く|一切|絶対|例外なく|いかなる場合|どのような場合|どんな場合|一律|あらゆる/;
   for (const q of QUESTIONS) {
     pos[q.answer] += 1;
-    const lens = q.choices.map((c) => c.length);
+    // 空白は見た目の長さに効かないので、除いてから数える。
+    const lens = q.choices.map((c) => c.replace(/\s/g, '').length);
     q.choices.forEach((c, i) => {
       if (!absolute.test(c)) return;
       if (i === q.answer) absoluteInCorrect += 1;
       else absoluteInWrong += 1;
     });
     // 正解だけが長いと、読まずに「長いものを選ぶ」で当てられてしまう。
-    // ただし 1〜2 文字の差まで数えると実態より大きく出るので、差の大きさで見る。
-    // 閾値は当初 1.5 倍だったが、別の目のレビューで 1.35 倍前後のものが
-    // 「長さで選べる」と大量に指摘されたため 1.3 倍まで下げた。
+    //
+    // **比で測ってはいけない。** 以前は「1.3 倍かつ 6 字差」で見ていたが、
+    // 長い選択肢どうしだと 40 字 / 34 字が 1.18 倍にしかならず素通りする。
+    // そうして漏れたものが積み上がり、このアプリでは 180 問のうち 44 問で
+    // 正解が最長になっていた（選択肢の長さの分布から計算した期待値の 3.6 倍）。
+    // 受験者がやるのは比の計算ではなく見比べなので、**字数の差**で見る。
     const other = Math.max(...lens.filter((_, i) => i !== q.answer));
     if (lens[q.answer] >= other * 1.25 && lens[q.answer] - other >= 5) longest += 1;
-    // 24 字の下限は、短い選択肢どうしで比が暴れるのを防ぐため
-    // （「13 字 / 5 字」で 2.6 倍になってしまう）。5 本の姉妹アプリで同じ値。
-    if (lens[q.answer] >= 24 && lens[q.answer] >= other * 1.3 && lens[q.answer] - other >= 6) {
+    if (lens[q.answer] - other >= 5) {
       warn(`問題 ${q.id}: 正解だけが突出して長い（正解 ${lens[q.answer]} 字 / 最長の誤答 ${other} 字）`);
     }
 
-    // 誤答 3 つすべてに言い切りがあり、正解にだけ無いと、
+    // 言い切りが誤答にだけ出ていると、
     // 内容を知らなくても「言い切っているものを外す」だけで当てられる。
     // 全体の集計（下の absoluteInWrong）は 1 問ごとの偏りを拾えず、
     // 実際にレビューで 10 問以上この型を指摘された。
-    if (q.choices.every((c, i) => i === q.answer || absolute.test(c)) && !absolute.test(q.choices[q.answer])) {
+    //
+    // **「3 つすべて」では緩すぎた。** 2 つ消去できれば残りは二択になり、
+    // それだけで正答率が 25 % から 50 % に上がる。2 つ以上で数える。
+    const wrongAbsolute = q.choices.filter((_, i) => i !== q.answer).filter((c) => absolute.test(c)).length;
+    if (wrongAbsolute >= 2 && !absolute.test(q.choices[q.answer])) {
       warn(
-        `問題 ${q.id}: 誤答 3 つすべてに言い切りがあり、正解にはない。` +
+        `問題 ${q.id}: 誤答 ${wrongAbsolute} つに言い切りがあり、正解にはない。` +
           '言い切りを外すだけで選べてしまうので、誤答側からも言い切りを減らすこと',
       );
+    }
+
+    // 「本文で挙げられているものはどれか」は、知識ではなく直前の記載を
+    // 覚えているかを問う形になっていて、教本を閉じた受験者には答えようがない。
+    if (/本文|教本|この節/.test(q.question)) {
+      warn(`問題 ${q.id}: 設問が教本の記載そのものを指している。知識を問う形にすること`);
     }
   }
   const n = QUESTIONS.length;
