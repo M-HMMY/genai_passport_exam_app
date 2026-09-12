@@ -154,16 +154,16 @@ export const kPromptQuestions: Question[] = [
     id: 'k-prompt-q10',
     categoryId: 'k-prompt',
     sectionId: 'k-prompt-2',
-    question: 'プロンプトの 4 要素のうち、Output Indicator に当たる指定を 2 つ選びなさい。',
+    question: 'プロンプトの 4 要素のうち、Context（文脈・背景）に当たる部分を 2 つ選びなさい。',
     choices: [
-      '「新入社員向けの説明です」',
-      '「箇条書きで書いてください」',
-      '「以下の文章を要約してください」',
-      '「200 字以内にまとめてください」',
+      '「回答は 200 字以内でお願いします」',
+      '「相手は初めて問い合わせた顧客です」',
+      '「次の問い合わせ文を分類してください」',
+      '「社外に公開する資料に使います」',
     ],
     answer: [1, 3],
     explanation:
-      'イとエが正しい。Output Indicator（出力形式の指定）は、回答の形式・長さ・項目・文体など「どんな形で返してほしいか」を指定する部分です。アは読み手や前提を伝える Context（文脈・背景）です。ウは実行してほしい作業なので Instruction（指示）で、「以下の文章」は Input Data（入力データ）との境目を示しています。Instruction は作業、Output Indicator は返答の形と区別してください。',
+      'イとエが正しい。Context（文脈・背景）は、目的・読み手・立場・前提条件など、作業を取り巻く状況を伝える部分です。イは相手が誰かを、エは何に使うかを伝えています。アは回答の長さの指定なので Output Indicator（出力形式の指定）です。ウは実行してほしい作業そのものなので Instruction（指示）です。同じ Instruction でも、Context が違えば語調や説明の細かさが変わります。',
     level: 2,
   },
 ];
