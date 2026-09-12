@@ -7,6 +7,7 @@ import { QuestionCard } from '../components/QuestionCard';
 import { actions, useStore } from '../store';
 import { navigate, useRoute } from '../lib/router';
 import { choiceIndexOf, useKeys } from '../lib/useKeys';
+import { isCorrectAnswer, toggleChoice } from '../lib/answer';
 
 function shuffle<T>(items: T[]): T[] {
   const a = [...items];
@@ -20,7 +21,8 @@ function shuffle<T>(items: T[]): T[] {
 interface Session {
   queue: Question[];
   idx: number;
-  selected: number | null;
+  /** 選択済みの添字。未選択は空配列（複数選択があるので配列で持つ） */
+  selected: number[];
   revealed: boolean;
   correctCount: number;
   /** 誤答した問題（復習用に最後に出す） */
@@ -59,13 +61,18 @@ export function Practice(): JSX.Element {
 
   const start = (questions: Question[]) => {
     if (questions.length === 0) return;
-    setSession({ queue: questions, idx: 0, selected: null, revealed: false, correctCount: 0, missed: [] });
+    setSession({ queue: questions, idx: 0, selected: [], revealed: false, correctCount: 0, missed: [] });
   };
 
   // --- 出題中の操作（キーボードからも呼べるよう早期 return より前に定義する） ---
   const select = useCallback(
     (index: number) => {
-      setSession((s) => (s === null || s.revealed ? s : { ...s, selected: index }));
+      setSession((s) => {
+        if (s === null || s.revealed) return s;
+        const q = s.queue[s.idx];
+        if (!q) return s;
+        return { ...s, selected: toggleChoice(q.answer, s.selected, index) };
+      });
     },
     [],
   );
@@ -75,10 +82,10 @@ export function Practice(): JSX.Element {
   // 学習記録が二重に登録されて成績分析と復習キューが狂う（実際に起きた）。
   // 記録は更新関数の外で 1 回だけ行う。Review.tsx / Mock.tsx も同じ形。
   const submit = useCallback(() => {
-    if (session === null || session.revealed || session.selected === null) return;
+    if (session === null || session.revealed || session.selected.length === 0) return;
     const q = session.queue[session.idx];
     if (!q) return;
-    const correct = session.selected === q.answer;
+    const correct = isCorrectAnswer(q.answer, session.selected);
     actions.answer({ qid: q.id, categoryId: q.categoryId, correct, mode: section ? 'check' : 'practice' });
     setSession({
       ...session,
@@ -89,7 +96,7 @@ export function Practice(): JSX.Element {
   }, [session, section]);
 
   const next = useCallback(() => {
-    setSession((s) => (s === null ? s : { ...s, idx: s.idx + 1, selected: null, revealed: false }));
+    setSession((s) => (s === null ? s : { ...s, idx: s.idx + 1, selected: [], revealed: false }));
   }, []);
 
   useKeys(
@@ -268,7 +275,7 @@ export function Practice(): JSX.Element {
               {session.idx + 1 === session.queue.length ? '結果を見る' : '次の問題へ'}
             </button>
           ) : (
-            <button type="button" className="btn primary" disabled={session.selected === null} onClick={submit}>
+            <button type="button" className="btn primary" disabled={session.selected.length === 0} onClick={submit}>
               解答する
             </button>
           )

@@ -211,10 +211,11 @@ export function Drill(): JSX.Element {
 
         <p className="qbody">{item.question}</p>
 
+        {/* ドリルは常に単一選択。ChoiceList は複数選択にも使うので、配列にして渡す */}
         <ChoiceList
           choices={item.choices}
-          selected={session.selected}
-          answer={item.answer}
+          selected={session.selected === null ? [] : [session.selected]}
+          answer={[item.answer]}
           revealed={session.revealed}
           onSelect={(i) => setSession((s) => (s === null || s.revealed ? s : { ...s, selected: i }))}
         />

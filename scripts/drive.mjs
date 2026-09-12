@@ -152,6 +152,16 @@ function choose(n) {
   );
 }
 
+/** いま選択されている選択肢の数。単一選択と複数選択の違いはここに出る。 */
+function selectedCount() {
+  return evaluate(`document.querySelectorAll('.choice.selected').length`);
+}
+
+/** いま出ている問題が複数選択かどうか。画面のタグで見る。 */
+function isMulti() {
+  return evaluate(`document.querySelector('.tag-multi') !== null`);
+}
+
 const report = [];
 const show = (title, body) => report.push(`\n===== ${title} =====\n${body}`);
 
@@ -164,39 +174,89 @@ await send('Runtime.enable');
 await evaluate(`location.href = ${JSON.stringify(BASE + '/#/home')}`);
 await sleep(1500);
 
-// 1. 教本の節が出るか。ウィジェットを埋め込んだ節を選ぶと一度に両方見られる。
+// 1. 教本の節が出るか。
 await go('#/textbook/g-privacy-1');
-show('教本 g-privacy-1', (await visible()).slice(0, 800));
+show('教本 g-privacy-1', (await visible()).slice(0, 300));
 
-// 2. 埋め込んだウィジェットが実際に反応するか。
-const picked = await click('要配慮個人情報');
-await sleep(300);
-show('ウィジェットを押したあと', `click=${picked}\n` + (await visible()).slice(-700));
-
-// 3. 確認問題を 1 問解いて、採点と解説まで出るか。
-//    クエリはルータの定義に合わせること（?cat=。?category= ではない）。
-await evaluate(`location.href = ${JSON.stringify(BASE + '/#/practice?cat=a-ai')}`);
-await sleep(1500);
-show('確認問題の設定画面', (await visible()).slice(0, 300));
-
+// 2. 複数選択：押すたびに入り切りし、2 つ同時に選べること。
+//
+//    **出題の前に必ずホームを経由すること。**Practice は画面を離れても
+//    セッションを持ったままなので、`#/practice?...` へ直接飛ぶと
+//    前の出題が続いてしまい、別の章を指定したつもりで前の章を解き続ける
+//    （これで一度、複数選択の問題に当たらず調べ直した）。
+await go('#/home');
+await evaluate(`location.href = ${JSON.stringify(BASE + '/#/practice?section=k-prompt-2')}`);
+await sleep(1000);
 await click('開始');
-await sleep(800);
-show('出題', (await visible()).slice(0, 400));
+await sleep(700);
 
+let found = false;
+for (let i = 0; i < 6; i++) {
+  if (await isMulti()) {
+    found = true;
+    break;
+  }
+  await choose(0);
+  await click('解答する');
+  await sleep(400);
+  if ((await click('次の問題')) === 'NOT_FOUND') break;
+  await sleep(400);
+}
+
+if (!found) {
+  show('複数選択', '**複数選択の問題に当たらなかった。**出題の抽選か、収録を確かめること');
+} else {
+  show('複数選択の出題', (await visible()).slice(0, 400));
+  await choose(1);
+  await choose(3);
+  await sleep(250);
+  const both = await selectedCount();
+  await choose(3); // もう一度押して外れるか（トグルになっているか）
+  await sleep(250);
+  const afterToggle = await selectedCount();
+  await choose(3);
+  await sleep(250);
+  show('複数選択の操作', `2 つ押した後 ${both} 個（2 であること） / もう一度押した後 ${afterToggle} 個（1 であること）`);
+  await click('解答する');
+  await sleep(600);
+  show('複数選択の採点', (await visible()).slice(0, 600));
+}
+
+// 3. 単一選択：押し直したら「置き換わる」こと。
+//    ここが壊れると、押すたびに選択が増えて別の問題形式になってしまう。
+await go('#/home');
+await evaluate(`location.href = ${JSON.stringify(BASE + '/#/practice?cat=a-ai')}`);
+await sleep(1000);
+await click('開始');
+await sleep(700);
+await choose(0);
+await choose(1);
+await sleep(250);
+show('単一選択で 2 回押した', `選択中 ${await selectedCount()} 個（1 個であること）`);
+await click('解答する');
+await sleep(600);
+show('単一選択の採点', (await visible()).slice(0, 300));
+
+// 4. 模試。解答の持ち方を 1 問ごとの配列にしたので、
+//    「解答済み N / M」の数え方と採点がそのまま動くかを見る。
+await go('#/home');
+await go('#/mock');
+await click('短縮');
+await sleep(400);
+await click('開始');
+await sleep(900);
 await choose(0);
 await sleep(300);
-await click('解答する');
-await sleep(800);
-show('採点後', (await visible()).slice(0, 900));
+show('模試で 1 問選んだ', (await visible()).slice(0, 120));
+await click('採点する');
+await sleep(900);
+show('模試の採点', (await visible()).slice(0, 400));
 
-// 4. 体験ツールの一覧。
+// 5. 体験ツールの一覧。
 await go('#/tools');
-show('体験ツール', (await visible()).slice(0, 700));
+show('体験ツール', (await visible()).slice(0, 250));
 
 // ============================================================
 
 show('コンソールエラー', errors.length ? errors.join('\n') : '(なし)');
 console.log(report.join('\n'));
-
-ws.close();
-edge.kill();

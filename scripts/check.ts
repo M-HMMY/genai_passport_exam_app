@@ -10,6 +10,7 @@ import { SECTIONS } from '../src/data/textbook';
 import { QUESTIONS } from '../src/data/questions';
 import { DRILLS } from '../src/data/drills';
 import { isKnownCommand } from '../src/lib/mathSymbols';
+import { answerIndices, isMultiAnswer } from '../src/lib/answer';
 import { renderCheck } from './render-check';
 import { existsSync, readdirSync } from 'node:fs';
 
@@ -61,9 +62,36 @@ for (const d of DRILLS) {
 // ---- 問題の形 ----
 for (const q of QUESTIONS) {
   if (q.choices.length !== 4) err(`問題 ${q.id}: 選択肢が ${q.choices.length} 個（4 個であること）`);
-  if (q.answer < 0 || q.answer > 3) err(`問題 ${q.id}: answer が範囲外 ${q.answer}`);
   if (new Set(q.choices).size !== q.choices.length) err(`問題 ${q.id}: 選択肢に重複がある`);
   if (q.explanation.trim() === '') err(`問題 ${q.id}: 解説が空`);
+
+  // ---- 正解の添字 ----
+  // 公式の出題形式が「四肢択一式（一部複数選択を含む）」なので、
+  // answer は添字ひとつか、添字の配列のどちらかを取る。
+  const right = answerIndices(q.answer);
+  if (right.length === 0) err(`問題 ${q.id}: answer が空`);
+  for (const i of right) {
+    if (!Number.isInteger(i) || i < 0 || i > 3) err(`問題 ${q.id}: answer が範囲外 ${i}`);
+  }
+  if (new Set(right).size !== right.length) err(`問題 ${q.id}: answer に同じ添字が 2 回ある`);
+  if (right.length === q.choices.length) {
+    err(`問題 ${q.id}: 選択肢が全部正解になっている（選ばない選択肢が要る）`);
+  }
+  if (isMultiAnswer(q.answer)) {
+    if (right.length === 1) {
+      // 配列で 1 つだけだと、画面には「複数選択」と出るのに実際は単一選択になる。
+      err(`問題 ${q.id}: 複数選択なのに正解が 1 つしかない。単一選択なら answer を数値で書くこと`);
+    }
+    // **いくつ選ぶのかは画面に出さない方針。**（QuestionCard のコメントを参照）
+    // 本番がそれを教えてくれる保証がないため、必要なら問題文に書く。
+    // ここで書き忘れを止めないと、受験者は選び終わりが分からないまま解くことになる。
+    if (!/(すべて|全て|あてはまるもの)(を)?選|[2-4]\s*つ選|(二|三|四)つ選/.test(q.question)) {
+      err(
+        `問題 ${q.id}: 複数選択なのに、問題文にいくつ選ぶかが書かれていない。` +
+          '「2 つ選びなさい」などを問題文へ入れること',
+      );
+    }
+  }
 }
 
 // ---- 問題が「解かなくても当てられる」形になっていないか ----
@@ -123,7 +151,11 @@ for (const q of QUESTIONS) {
     }
   }
 
+  // 正解の位置の偏りは**単一選択の問題だけで数える。**
+  // 複数選択は 1 問で 2 つ以上の位置を埋めるので、混ぜると
+  // 「ア が多い」のような偏りが実際より薄まって見えなくなる。
   const pos = [0, 0, 0, 0];
+  let single = 0;
   let longest = 0;
   let absoluteInCorrect = 0;
   let absoluteInWrong = 0;
@@ -132,12 +164,16 @@ for (const q of QUESTIONS) {
   // 「常に」は部分一致だと「非常に」「通常に」まで拾ってしまうので、直前の字で除く。
   const absolute = /必ず|(?<![非通日])常に|まったく|全く|一切|絶対|例外なく|いかなる場合|どのような場合|どんな場合|一律|あらゆる/;
   for (const q of QUESTIONS) {
-    pos[q.answer] += 1;
+    const right = new Set(answerIndices(q.answer));
+    if (!isMultiAnswer(q.answer)) {
+      pos[answerIndices(q.answer)[0]] += 1;
+      single += 1;
+    }
     // 空白は見た目の長さに効かないので、除いてから数える。
     const lens = q.choices.map((c) => c.replace(/\s/g, '').length);
     q.choices.forEach((c, i) => {
       if (!absolute.test(c)) return;
-      if (i === q.answer) absoluteInCorrect += 1;
+      if (right.has(i)) absoluteInCorrect += 1;
       else absoluteInWrong += 1;
     });
     // 正解だけが長いと、読まずに「長いものを選ぶ」で当てられてしまう。
@@ -147,10 +183,14 @@ for (const q of QUESTIONS) {
     // そうして漏れたものが積み上がり、このアプリでは 180 問のうち 44 問で
     // 正解が最長になっていた（選択肢の長さの分布から計算した期待値の 3.6 倍）。
     // 受験者がやるのは比の計算ではなく見比べなので、**字数の差**で見る。
-    const other = Math.max(...lens.filter((_, i) => i !== q.answer));
-    if (lens[q.answer] >= other * 1.25 && lens[q.answer] - other >= 5) longest += 1;
-    if (lens[q.answer] - other >= 5) {
-      warn(`問題 ${q.id}: 正解だけが突出して長い（正解 ${lens[q.answer]} 字 / 最長の誤答 ${other} 字）`);
+    //
+    // 複数選択では「正解のうちいちばん短いもの」と「誤答のうちいちばん長いもの」を
+    // 比べる。正解が軒並み誤答より長ければ、やはり長い順に選ぶだけで当たるため。
+    const other = Math.max(...lens.filter((_, i) => !right.has(i)));
+    const mine = Math.min(...lens.filter((_, i) => right.has(i)));
+    if (mine >= other * 1.25 && mine - other >= 5) longest += 1;
+    if (mine - other >= 5) {
+      warn(`問題 ${q.id}: 正解だけが突出して長い（正解 ${mine} 字 / 最長の誤答 ${other} 字）`);
     }
 
     // 言い切りが誤答にだけ出ていると、
@@ -160,8 +200,8 @@ for (const q of QUESTIONS) {
     //
     // **「3 つすべて」では緩すぎた。** 2 つ消去できれば残りは二択になり、
     // それだけで正答率が 25 % から 50 % に上がる。2 つ以上で数える。
-    const wrongAbsolute = q.choices.filter((_, i) => i !== q.answer).filter((c) => absolute.test(c)).length;
-    if (wrongAbsolute >= 2 && !absolute.test(q.choices[q.answer])) {
+    const wrongAbsolute = q.choices.filter((_, i) => !right.has(i)).filter((c) => absolute.test(c)).length;
+    if (wrongAbsolute >= 2 && !q.choices.some((c, i) => right.has(i) && absolute.test(c))) {
       warn(
         `問題 ${q.id}: 誤答 ${wrongAbsolute} つに言い切りがあり、正解にはない。` +
           '言い切りを外すだけで選べてしまうので、誤答側からも言い切りを減らすこと',
@@ -179,9 +219,9 @@ for (const q of QUESTIONS) {
   const n = QUESTIONS.length;
   if (n >= 40) {
     pos.forEach((c, i) => {
-      const rate = c / n;
+      const rate = c / single;
       if (rate < 0.15 || rate > 0.35) {
-        warn(`正解の位置が ${'アイウエ'[i]} に偏っている（${c} / ${n} 問）。選択肢を並べ替えて散らすこと`);
+        warn(`正解の位置が ${'アイウエ'[i]} に偏っている（${c} / ${single} 問）。選択肢を並べ替えて散らすこと`);
       }
     });
     if (longest / n > 0.3) {

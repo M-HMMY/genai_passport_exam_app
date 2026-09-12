@@ -44,9 +44,8 @@ export interface TextbookSection {
  * 本番は 1 問あたり約 60 秒（60 問 / 60 分）なので、問題文は本番で読み切れる長さに収めること。
  *
  * **公式の出題形式は「四肢択一式（一部複数選択を含む）」。**
- * この型が表現できるのは四肢択一だけで、複数選択には対応していない。
- * 対応するなら `answer` を配列にし、`ChoiceList` と採点側（Practice / Review / Mock）を
- * まとめて直す必要がある。**やるかどうかは CLAUDE.md の宿題に残してある。**
+ * 複数選択は `answer` に添字の配列を入れて表す。読むときも比べるときも
+ * `src/lib/answer.ts` を通すこと（画面ごとに場合分けを書くとずれる）。
  */
 export interface Question {
   id: string;
@@ -57,8 +56,15 @@ export interface Question {
   /** プロンプトの例など、原文のまま見せたい断片。等幅・行番号付きで表示する */
   code?: string;
   choices: [string, string, string, string];
-  /** 正解の添字（0=ア, 1=イ, 2=ウ, 3=エ） */
-  answer: 0 | 1 | 2 | 3;
+  /**
+   * 正解の添字（0=ア, 1=イ, 2=ウ, 3=エ）。
+   *
+   * **複数選択の問題は、正解の添字を昇順の配列で書く**（例: `[0, 2]`）。
+   * そのときは**問題文に「2 つ選びなさい」などと必ず書くこと。**
+   * いくつ選ぶのかを画面側が教えてしまうと、本番より易しくなる。
+   * `npm run check` が、書き忘れをエラーにする。
+   */
+  answer: 0 | 1 | 2 | 3 | readonly number[];
   explanation: string;
   /** 体感難易度 1（易）〜3（難） */
   level: 1 | 2 | 3;

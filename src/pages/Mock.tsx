@@ -7,12 +7,12 @@ import type { FieldId } from '../types';
 import { actions } from '../store';
 import { navigate } from '../lib/router';
 import { choiceIndexOf, useKeys } from '../lib/useKeys';
+import { isCorrectAnswer, toggleChoice } from '../lib/answer';
 
 interface Item {
   qid: string;
   categoryId: string;
   q: Question;
-  answer: number;
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -24,7 +24,7 @@ function shuffle<T>(items: T[]): T[] {
   return a;
 }
 
-const toItem = (q: Question): Item => ({ qid: q.id, categoryId: q.categoryId, q, answer: q.answer });
+const toItem = (q: Question): Item => ({ qid: q.id, categoryId: q.categoryId, q });
 
 /**
  * 模試の問題を作る。
@@ -64,14 +64,14 @@ function build(count: number): Item[] {
  * 「何点で合格」という形にすると、根拠のない基準をアプリが作り出してしまう。
  * ここでは弱い分野を見つけるための正答率だけを出す。
  */
-function fieldScores(items: Item[], answers: (number | null)[]): { id: FieldId; total: number; correct: number }[] {
+function fieldScores(items: Item[], answers: number[][]): { id: FieldId; total: number; correct: number }[] {
   return FIELDS.filter((f) => f.questions > 0).map((f) => {
     let total = 0;
     let correct = 0;
     items.forEach((item, i) => {
       if (fieldOfCategory(item.categoryId) !== f.id) return;
       total += 1;
-      if (answers[i] === item.answer) correct += 1;
+      if (isCorrectAnswer(item.q.answer, answers[i])) correct += 1;
     });
     return { id: f.id, total, correct };
   });
@@ -100,7 +100,8 @@ const PRESETS: (Config & { label: string; note: string })[] = [
 interface Session {
   config: Config;
   items: Item[];
-  answers: (number | null)[];
+  /** 各問の選択。未解答は空配列（複数選択があるので配列で持つ） */
+  answers: number[][];
   idx: number;
   startedAt: number;
   /** 採点済みなら経過秒数を保持 */
@@ -133,7 +134,7 @@ export function Mock(): JSX.Element {
     const byCategory: MockResult['byCategory'] = {};
     let correct = 0;
     s.items.forEach((item, i) => {
-      const ok = s.answers[i] === item.answer;
+      const ok = isCorrectAnswer(item.q.answer, s.answers[i]);
       if (ok) correct += 1;
       const entry = byCategory[item.categoryId] ?? { total: 0, correct: 0 };
       entry.total += 1;
@@ -172,7 +173,7 @@ export function Mock(): JSX.Element {
           setSession((s) => {
             if (s === null) return s;
             const answers = [...s.answers];
-            answers[s.idx] = choice;
+            answers[s.idx] = toggleChoice(s.items[s.idx].q.answer, answers[s.idx], choice);
             return { ...s, answers };
           });
           return;
@@ -190,7 +191,7 @@ export function Mock(): JSX.Element {
   );
 
   const unanswered = useMemo(
-    () => (session ? session.answers.reduce<number[]>((acc, a, i) => (a === null ? [...acc, i] : acc), []) : []),
+    () => (session ? session.answers.reduce<number[]>((acc, a, i) => (a.length === 0 ? [...acc, i] : acc), []) : []),
     [session],
   );
 
@@ -217,7 +218,7 @@ export function Mock(): JSX.Element {
                   setSession({
                     config: { count: p.count, minutes: p.minutes },
                     items: build(p.count),
-                    answers: new Array(p.count).fill(null),
+                    answers: Array.from({ length: p.count }, () => [] as number[]),
                     idx: 0,
                     startedAt: Date.now(),
                     finishedAt: null,
@@ -238,7 +239,7 @@ export function Mock(): JSX.Element {
           このアプリは合否を判定しません。代わりに、正答率・時間内に解き切れたか・どの分野が弱いかを出します。
         </p>
         <p className="hint">
-          ※ この模試は四肢択一だけで出題します（本番には一部、複数選択の問題が含まれます）。
+          ※ 本番と同じく、一部に複数選択の問題が混じります。いくつ選ぶかは問題文に書いてあります。
           この記述は 2026 年 9 月時点のものです。最新の試験要項は GUGA の公式サイトで確認してください。
         </p>
       </div>
@@ -247,11 +248,11 @@ export function Mock(): JSX.Element {
 
   // ---- 採点結果 ----
   if (session.finishedAt !== null) {
-    const correct = session.items.filter((item, i) => session.answers[i] === item.answer).length;
+    const correct = session.items.filter((item, i) => isCorrectAnswer(item.q.answer, session.answers[i])).length;
     const rate = Math.round((correct / session.items.length) * 100);
     const elapsed = Math.round((session.finishedAt - session.startedAt) / 1000);
     const scores = fieldScores(session.items, session.answers);
-    const blank = session.answers.filter((a) => a === null).length;
+    const blank = session.answers.filter((a) => a.length === 0).length;
     // この試験で問われるのは速度でもある。持ち時間と実際のペースを比べる
     const perQuestion = elapsed / session.items.length;
     const budget = (session.config.minutes * 60) / session.items.length;
@@ -259,7 +260,7 @@ export function Mock(): JSX.Element {
     session.items.forEach((item, i) => {
       const e = byCat.get(item.categoryId) ?? { total: 0, correct: 0 };
       e.total += 1;
-      if (session.answers[i] === item.answer) e.correct += 1;
+      if (isCorrectAnswer(item.q.answer, session.answers[i])) e.correct += 1;
       byCat.set(item.categoryId, e);
     });
 
@@ -396,7 +397,7 @@ export function Mock(): JSX.Element {
   const item = session.items[session.idx];
   const setAnswer = (choice: number) => {
     const answers = [...session.answers];
-    answers[session.idx] = choice;
+    answers[session.idx] = toggleChoice(item.q.answer, answers[session.idx], choice);
     setSession({ ...session, answers });
   };
   const move = (delta: number) => {
@@ -409,7 +410,7 @@ export function Mock(): JSX.Element {
       <div className={`exam-bar ${remaining < 300 ? 'urgent' : ''}`}>
         <span className="exam-timer">残り {formatTime(remaining)}</span>
         <span className="exam-count">
-          解答済み {session.answers.filter((a) => a !== null).length} / {session.items.length}
+          解答済み {session.answers.filter((a) => a.length > 0).length} / {session.items.length}
         </span>
         <button type="button" className="btn small" onClick={() => finish(session)}>
           採点する
@@ -449,7 +450,7 @@ export function Mock(): JSX.Element {
             <button
               key={i}
               type="button"
-              className={`grid-cell ${session.answers[i] !== null ? 'filled' : ''} ${i === session.idx ? 'current' : ''}`}
+              className={`grid-cell ${session.answers[i].length > 0 ? 'filled' : ''} ${i === session.idx ? 'current' : ''}`}
               onClick={() => setSession({ ...session, idx: i })}
             >
               {i + 1}

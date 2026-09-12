@@ -436,4 +436,20 @@ export const bModelQuestions: Question[] = [
       'ウが正しい。RoBERTa は学習方法を強化した改良版、ALBERT は a Lite BERT の名のとおり軽量化した改良版です。アは二つの説明が入れ替わっています。イは扱うデータの種類による記述で、どちらも文章を扱います。エは土台のモデルが誤りで、どちらも BERT の改良版です。',
     level: 3,
   },
+  {
+    id: 'b-model-q28',
+    categoryId: 'b-model',
+    sectionId: 'b-model-5',
+    question: 'Transformer の説明として適切なものを 2 つ選びなさい。',
+    choices: [
+      '語を 1 つずつ順番に処理するため並列化ができない',
+      '文中のどの語に注目するかを重みで決めるアテンションを使う',
+      '画像の畳み込みを重ねて特徴を取り出すのが中心である',
+      '系列の要素どうしの関係をまとめて捉えられる',
+    ],
+    answer: [1, 3],
+    explanation:
+      'イとエが正しい。Transformer はアテンション（attention＝注意。どこに注目するかを重みで決める）で語どうしの関係を捉え、系列をまとめて扱えます。アは語を順番に処理する RNN の弱点で、Transformer はこれを解消した側です。ウは画像を扱う CNN の説明で、Transformer の中心ではありません。',
+    level: 2,
+  },
 ];

@@ -5,6 +5,7 @@ import { actions, useStore } from '../store';
 import { dueCards, GRADE_LABEL, type Grade } from '../lib/srs';
 import { navigate } from '../lib/router';
 import { choiceIndexOf, useKeys } from '../lib/useKeys';
+import { isCorrectAnswer, toggleChoice } from '../lib/answer';
 
 /** SRS カードの qid から出題内容を解決する */
 interface Item {
@@ -22,7 +23,8 @@ function resolve(qid: string, categoryId: string): Item | null {
 export function Review(): JSX.Element {
   const state = useStore();
   const [idx, setIdx] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
+  // 未選択は空配列。複数選択の問題があるので、単一選択でも配列で持つ
+  const [selected, setSelected] = useState<number[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [done, setDone] = useState({ total: 0, correct: 0 });
 
@@ -40,11 +42,11 @@ export function Review(): JSX.Element {
     (g: Grade) => {
       const item = queue[idx];
       if (!item) return;
-      const correct = selected === item.question.answer;
+      const correct = isCorrectAnswer(item.question.answer, selected);
       actions.answer({ qid: item.qid, categoryId: item.categoryId, correct, mode: 'review', grade: g });
       setDone((d) => ({ total: d.total + 1, correct: d.correct + (correct ? 1 : 0) }));
       setIdx((i) => i + 1);
-      setSelected(null);
+      setSelected([]);
       setRevealed(false);
     },
     [queue, idx, selected],
@@ -59,13 +61,13 @@ export function Review(): JSX.Element {
         if (!revealed) {
           const choice = choiceIndexOf(key);
           if (choice !== null) {
-            setSelected(choice);
+            setSelected((prev) => toggleChoice(item.question.answer, prev, choice));
             return;
           }
-          if (key === 'Enter' && selected !== null) setRevealed(true);
+          if (key === 'Enter' && selected.length > 0) setRevealed(true);
           return;
         }
-        const isCorrect = selected === item.question.answer;
+        const isCorrect = isCorrectAnswer(item.question.answer, selected);
         const grades: Grade[] = isCorrect ? ['again', 'hard', 'good', 'easy'] : ['again'];
         if (key === 'Enter') {
           applyGrade(isCorrect ? 'good' : 'again');
@@ -124,7 +126,7 @@ export function Review(): JSX.Element {
   }
 
   const item = queue[idx];
-  const isCorrect = selected === item.question.answer;
+  const isCorrect = isCorrectAnswer(item.question.answer, selected);
 
   const footer = revealed ? (
     <div className="grade-row">
@@ -141,7 +143,7 @@ export function Review(): JSX.Element {
       </div>
     </div>
   ) : (
-    <button type="button" className="btn primary" disabled={selected === null} onClick={() => setRevealed(true)}>
+    <button type="button" className="btn primary" disabled={selected.length === 0} onClick={() => setRevealed(true)}>
       解答する
     </button>
   );
@@ -155,7 +157,7 @@ export function Review(): JSX.Element {
         q={item.question}
         selected={selected}
         revealed={revealed}
-        onSelect={setSelected}
+        onSelect={(i) => setSelected((prev) => toggleChoice(item.question.answer, prev, i))}
         counter={`${idx + 1} / ${queue.length}`}
         footer={footer}
       />

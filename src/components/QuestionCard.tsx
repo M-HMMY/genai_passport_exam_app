@@ -5,10 +5,12 @@ import { categoryName } from '../data/categories';
 import { Markdown } from '../lib/markdown';
 import { sectionById } from '../data/textbook';
 import { navigate } from '../lib/router';
+import { answerIndices, isCorrectAnswer, isMultiAnswer } from '../lib/answer';
 
 interface Props {
   q: Question;
-  selected: number | null;
+  /** 選択済みの添字。未選択は空配列 */
+  selected: readonly number[];
   /** 解答を確定して解説を表示している状態か */
   revealed: boolean;
   onSelect: (index: number) => void;
@@ -49,7 +51,9 @@ export function QuestionCard({
   hideResult = false,
 }: Props): JSX.Element {
   const section = q.sectionId ? sectionById(q.sectionId) : undefined;
-  const isCorrect = selected === q.answer;
+  const multi = isMultiAnswer(q.answer);
+  const right = answerIndices(q.answer);
+  const isCorrect = isCorrectAnswer(q.answer, selected);
 
   return (
     <article className="qcard">
@@ -58,6 +62,7 @@ export function QuestionCard({
           <span className="tag">確認問題</span>
           <span className="tag tag-cat">{categoryName(q.categoryId)}</span>
           <span className="tag tag-level">{'★'.repeat(q.level)}</span>
+          {multi && <span className="tag tag-multi">複数選択</span>}
           {q.source && <span className="tag tag-src">公式過去問</span>}
         </div>
         {counter && <span className="counter">{counter}</span>}
@@ -69,18 +74,26 @@ export function QuestionCard({
 
       {q.code && <CodeBlock code={q.code} />}
 
+      {/*
+        操作の説明だけを出す。**いくつ選ぶのかは書かない。**
+        本番でそれを教えてくれる保証はないので、必要なら問題文の側に書く
+        （`npm run check` が問題文への記載を required にしている）。
+      */}
+      {multi && !revealed && <p className="multi-hint">押すたびに選択が入り切りします。</p>}
+
       <ChoiceList
         choices={q.choices}
         selected={selected}
-        answer={hideResult ? null : q.answer}
+        answer={hideResult ? null : right}
         revealed={revealed}
+        multi={multi}
         onSelect={onSelect}
       />
 
       {revealed && !hideResult && (
         <div className={`result ${isCorrect ? 'ok' : 'ng'}`}>
           <p className="verdict">
-            {isCorrect ? '正解' : '不正解'}　正解は {CHOICE_LABELS[q.answer]}
+            {isCorrect ? '正解' : '不正解'}　正解は {right.map((i) => CHOICE_LABELS[i]).join('・')}
           </p>
           <div className="explanation">
             <Markdown source={q.explanation} />

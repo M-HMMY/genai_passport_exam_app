@@ -1149,6 +1149,21 @@ tr.low td {
   color: #fff;
 }
 
+/*
+  複数選択の問題。
+  丸いラベルは「1 つだけ選ぶ」ように見えるので、角を落とした四角にして、
+  形そのもので入り切りできることを伝える（チェックボックスの見立て）。
+*/
+.choices-multi .choice-label {
+  border-radius: 6px;
+}
+
+.multi-hint {
+  margin: 0 0 8px;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
 /* ===== 判定・解説 ===== */
 .result {
   margin-top: 18px;
@@ -1486,6 +1501,11 @@ kbd {
 /* 公式過去問の出典表示 */
 .tag-src {
   background: var(--warn);
+  color: #fff;
+}
+
+.tag-multi {
+  background: var(--accent);
   color: #fff;
 }
 
