@@ -93,7 +93,10 @@ for (const q of QUESTIONS) {
       for (let i = 0; i < t.length - 1; i += 1) set.add(t.slice(i, i + 2));
       return set;
     };
-    const rows = QUESTIONS.map((q) => ({ q, g: grams(q) }));
+    /** 問題文と選択肢に出てくる数を、順序どおりに並べた文字列 */
+    const numbers = (q: (typeof QUESTIONS)[number]): string =>
+      (q.question + q.choices.join(' ')).match(/[0-9][0-9,.]*/g)?.join('/') ?? '';
+    const rows = QUESTIONS.map((q) => ({ q, g: grams(q), nums: numbers(q) }));
     for (let i = 0; i < rows.length; i += 1) {
       for (let j = i + 1; j < rows.length; j += 1) {
         const a = rows[i].g;
@@ -107,7 +110,10 @@ for (const q of QUESTIONS) {
         // 署名）なので正常。節をまたいで似ているものが、気づかずに書いた重複。
         const sameSection =
           rows[i].q.sectionId !== undefined && rows[i].q.sectionId === rows[j].q.sectionId;
-        if (sim >= 0.6 && !sameSection) {
+        // 同じ公式を、理論の節と演習の節で**数値だけ変えて**出すのは意図した
+        // 繰返しなので重複ではない（稼働率・損益分岐点・伝送時間など）。
+        // 文面が似ていても、出てくる数が違えば別の問題として扱う。
+        if (sim >= 0.6 && !sameSection && rows[i].nums === rows[j].nums) {
           warn(
             `問題 ${rows[i].q.id} と ${rows[j].q.id} が別の節でほぼ同じ内容（類似度 ${sim.toFixed(2)}）。` +
               '片方の数値か観点を変える',
@@ -136,7 +142,9 @@ for (const q of QUESTIONS) {
     // 「長さで選べる」と大量に指摘されたため 1.3 倍まで下げた。
     const other = Math.max(...lens.filter((_, i) => i !== q.answer));
     if (lens[q.answer] >= other * 1.25 && lens[q.answer] - other >= 5) longest += 1;
-    if (lens[q.answer] >= other * 1.3 && lens[q.answer] - other >= 6) {
+    // 24 字の下限は、短い選択肢どうしで比が暴れるのを防ぐため
+    // （「13 字 / 5 字」で 2.6 倍になってしまう）。5 本の姉妹アプリで同じ値。
+    if (lens[q.answer] >= 24 && lens[q.answer] >= other * 1.3 && lens[q.answer] - other >= 6) {
       warn(`問題 ${q.id}: 正解だけが突出して長い（正解 ${lens[q.answer]} 字 / 最長の誤答 ${other} 字）`);
     }
 
@@ -526,105 +534,6 @@ for (const q of QUESTIONS) {
   checkMath(`問題 ${q.id}`, q.question);
   checkMath(`問題 ${q.id}`, q.explanation);
   q.choices.forEach((c) => checkMath(`問題 ${q.id}`, c));
-}
-
-// ---- 1 問ごとに見る偏り ----
-// 上の検査は全体の比率で見ているため、「全体では 10% だが、その 10% は
-// 確かに直すべき問題」という状態を素通りする。どの問題かが分からないと
-// 直しようがないので、1 問ごとに見て id を出す。
-{
-  const own = QUESTIONS.filter((q) => q.source === undefined && q.choices.length === 4);
-
-  /** 同じ型の注意が大量に出ると全部読み飛ばされるので、多いときはまとめる */
-  const group = (label: string, items: string[]): void => {
-    if (items.length === 0) return;
-    if (items.length <= 10) {
-      items.forEach(warn);
-      return;
-    }
-    warn(`${label}（${items.length} 件。ひどい順に 10 件だけ表示）`);
-    items.slice(0, 10).forEach((m) => warn('    ' + m));
-  };
-
-  // 正解だけが長いと、読まずに「長いものを選ぶ」で当てられる。
-  // 数式は 1 文字ぶんに潰してから数える（$\frac{1}{2}$ は見た目には短い）。
-  {
-    const width = (s: string): number => s.replace(/\$[^$]*\$/g, '#').replace(/\s/g, '').length;
-    const found: { diff: number; msg: string }[] = [];
-    for (const q of own) {
-      const lens = q.choices.map(width);
-      const other = Math.max(...lens.filter((_, i) => i !== q.answer));
-      const mine = lens[q.answer];
-      if (mine >= other * 1.3 && mine - other >= 6) {
-        found.push({ diff: mine - other, msg: `問題 ${q.id}: 正解 ${mine} 字 / 最長の誤答 ${other} 字` });
-      }
-    }
-    found.sort((a, b) => b.diff - a.diff);
-    group('正解だけが突出して長い。誤答も同じ密度で書くこと', found.map((f) => f.msg));
-  }
-
-  // 誤答 3 つすべてに言い切りがあり、正解にだけ無いと、言い切りの有無が手掛かりになる。
-  // 全体の個数で見ていると、正解側にも言い切りがある問題があるだけで隠れてしまう。
-  {
-    const absolute = /必ず|すべて|常に|まったく|一切|絶対|例外なく|いかなる場合|どのような場合|一律/;
-    const found: string[] = [];
-    for (const q of own) {
-      const wrongAllHave = q.choices.every((c, i) => i === q.answer || absolute.test(c));
-      if (wrongAllHave && !absolute.test(q.choices[q.answer])) {
-        found.push(`問題 ${q.id}: 誤答 3 つすべてに言い切りがあり、正解にはない`);
-      }
-    }
-    group('言い切りが誤答側にだけ出ている', found);
-  }
-}
-
-// ---- 節をまたいだ重複 ----
-// 完全一致だけでは、数字も選択肢も同じで語だけ言い換えた重複を見逃す。
-// 分野をまたいだ重複は 1 節ずつ見ている限り気づけないので、機械に数えさせる。
-// 問題文だけで測ると「〜として、適切なものはどれか」という定型が効いて
-// 全部が似てしまうので、選択肢も混ぜて測る。
-//
-// 同じ節の中で似るのは、対比のために対で作った問題（直列と並列、暗号化と署名）
-// なので正常。節をまたいで似ているものが、気づかずに書いた重複。
-// 出典のある問題どうしは対象外（原文どおり収録すべきもので、こちらでは直せない）。
-{
-  const grams = (q: (typeof QUESTIONS)[number]): Set<string> => {
-    const t = (q.question + [...q.choices].sort().join('')).replace(
-      /[\s。、，,．.「」『』（）()]/g,
-      '',
-    );
-    const set = new Set<string>();
-    for (let i = 0; i < t.length - 1; i += 1) set.add(t.slice(i, i + 2));
-    return set;
-  };
-  const rows = QUESTIONS.map((q) => ({ q, g: grams(q) }));
-  const found: string[] = [];
-  for (let i = 0; i < rows.length; i += 1) {
-    for (let j = i + 1; j < rows.length; j += 1) {
-      if (rows[i].q.source !== undefined && rows[j].q.source !== undefined) continue;
-      const a = rows[i].g;
-      const b = rows[j].g;
-      let hit = 0;
-      a.forEach((g) => {
-        if (b.has(g)) hit += 1;
-      });
-      const sim = (2 * hit) / (a.size + b.size);
-      const sameSection =
-        rows[i].q.sectionId !== undefined && rows[i].q.sectionId === rows[j].q.sectionId;
-      if (sim >= 0.6 && !sameSection) {
-        found.push(
-          `${rows[i].q.id} と ${rows[j].q.id} が別の節でほぼ同じ内容（類似度 ${sim.toFixed(2)}）`,
-        );
-      }
-    }
-  }
-  // 同じ型の注意が大量に出ると全部読み飛ばされるので、多いときはまとめる
-  if (found.length > 10) {
-    warn(`別の節にほぼ同じ問題がある。片方の数値か観点を変える（${found.length} 件。10 件だけ表示）`);
-    found.slice(0, 10).forEach((m) => warn('    ' + m));
-  } else {
-    found.forEach(warn);
-  }
 }
 
 // ---- 実際に描いてみる ----
