@@ -1,7 +1,7 @@
 # 第 5 章 LLM とプロンプトの基礎（章 ID: `k-prompt`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-11.txt - < scripts/prompts/11-k-prompt.md
 ```
 

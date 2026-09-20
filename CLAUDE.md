@@ -6,7 +6,7 @@
 
 生成AIパスポート試験（GUGA＝一般社団法人生成AI活用普及協会）の学習アプリ。**教本を軸にした学習アプリ**であって、問題集アプリではありません。
 
-**コードは `C:\Dev\g_exam_app` から持ってきてあります。**`fe_exam_app` から数えて 5 つめにあたる姉妹アプリで、検査がいちばん充実しています。画面・記法・運用の作法は共通なので、**迷ったら向こうの実装を見れば答えがあります。**
+**コードは `g_exam_app` から持ってきてあります。**`fe_exam_app` から数えて 5 つめにあたる姉妹アプリで、検査がいちばん充実しています。画面・記法・運用の作法は共通なので、**迷ったら向こうの実装を見れば答えがあります。**
 
 **ただし向こうは別の試験です。**参照するのはコードと作法だけにして、試験の中身は持ち込まないこと。
 
@@ -273,8 +273,12 @@ npm run build
 **Codex CLI を使います**（`npm install -g @openai/codex`、ChatGPT ログイン済み）。姉妹アプリの教本の大半はこれで書きました。
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never -o out.txt - < scripts/prompts/03-xxx.md
+codex exec --sandbox workspace-write --color never -o out.txt - < scripts/prompts/03-xxx.md
 ```
+
+**★ リポジトリの直下で走らせてください。**`--cd` を付けていないので、別の場所から叩くと、そのディレクトリを読みにいきます。
+（公開リポジトリにローカルパスを残さないため、2026 年 9 月 20 日に系譜全体から外しました。）
+
 
 依頼側のコンテキストを食わないよう、`-o` で最終メッセージだけをファイルに落とすのが要点です。**実際に使ったプロンプトは `g_exam_app/scripts/prompts/` と `itpassport_exam_app/scripts/prompts/` に全部残っています。そこの README を読んでひな形にしてください。**何をプロンプトに入れると品質が上がるか（間違えやすい事実の名指し、リンクしてよい節 id の全列挙など）が書いてあります。
 

@@ -1,7 +1,7 @@
 # 第 4 章 AI 社会原則・ガイドラインと AI 新法（章 ID: `j-principles`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-10.txt - < scripts/prompts/10-j-principles.md
 ```
 

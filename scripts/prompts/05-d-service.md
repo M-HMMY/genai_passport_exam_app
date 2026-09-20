@@ -1,7 +1,7 @@
 # 第 3 章 いまの生成 AI でできること（章 ID: `d-service`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-05.txt - < scripts/prompts/05-d-service.md
 ```
 

@@ -1,7 +1,7 @@
 # 確認問題を書かせるプロンプト（章ごとに使い回す）
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-q-a-ai.txt - < scripts/prompts/20-questions.md
 ```
 

@@ -1,7 +1,7 @@
 # 第 2 章 生成 AI が生まれるまで（章 ID: `b-model`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-03.txt - < scripts/prompts/03-b-model.md
 ```
 

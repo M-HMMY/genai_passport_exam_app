@@ -1,7 +1,7 @@
 # 第 4 章 個人情報保護（章 ID: `g-privacy`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-08.txt - < scripts/prompts/08-g-privacy.md
 ```
 

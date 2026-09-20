@@ -1,7 +1,7 @@
 # 第 2 章 ChatGPT と主要な生成 AI（章 ID: `c-chatgpt`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-04.txt - < scripts/prompts/04-c-chatgpt.md
 ```
 

@@ -1,7 +1,7 @@
 # 第 4 章 制作物に関わる権利（章 ID: `h-rights`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-09.txt - < scripts/prompts/09-h-rights.md
 ```
 

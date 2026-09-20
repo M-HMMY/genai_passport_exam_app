@@ -1,7 +1,7 @@
 # 第 1 章 AI（人工知能）の基礎（章 ID: `a-ai`）の執筆プロンプト
 
 ```bash
-codex exec --cd "C:/Dev/genai_passport_exam_app" --sandbox workspace-write --color never \
+codex exec --sandbox workspace-write --color never \
   -o out-02.txt - < scripts/prompts/02-a-ai.md
 ```
 
